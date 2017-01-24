@@ -19,7 +19,8 @@ int main(int argc, char* argv[])
   wnd = XCreateSimpleWindow(dsp, DefaultRootWindow(dsp), 0, 0,
 			    200, 100, 0, blackColor, blackColor);
 
-  XSelectInput(dsp, wnd, StructureNotifyMask);
+  XSelectInput(dsp, wnd, StructureNotifyMask | ButtonPressMask | KeyPressMask);
+  // Calling XSelectInput again overrides previous input
   //XSelectInput(dsp, wnd, ButtonPressMask);
 
   XMapWindow(dsp, wnd);
@@ -54,13 +55,13 @@ int main(int argc, char* argv[])
 	break;
       }
     
+
     if (e.type == MapNotify)
-      break;
+      {
+	XDrawLine(dsp, wnd, gc, 10, 60, 180, 20);
+	XFlush(dsp);
+      }
   }
-
-  XDrawLine(dsp, wnd, gc, 10, 60, 180, 20);
-
-  XFlush(dsp);
 
   sleep(3);
 
