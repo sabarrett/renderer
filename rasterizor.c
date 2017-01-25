@@ -6,6 +6,19 @@
 #include <X11/Xutil.h>
 #include <math.h>
 
+int blackColor, whiteColor;
+XImage* img;
+
+int max(int a, int b)
+{
+  return a > b ? a : b;
+}
+
+int min(int a, int b)
+{
+  return a < b ? a : b;
+}
+
 static int x_at_y(int x1, int y1, int x2, int y2, int y);
 void graphics_prog();
 
@@ -49,10 +62,88 @@ int x_at_y(int x1, int y1, int x2, int y2, int y)
   return (int)round(minv * (y - b));
 }
 
+struct point2 {
+  int x;
+  int y;
+};
+
+void draw_triangle(struct point2 p1, struct point2 p2, struct point2 p3)
+{
+  struct point2* topPoint = &p1;
+  struct point2* bottomPoint = &p1;
+  struct point2* m;
+  struct point2* n;
+  
+  if (p2.y < topPoint->y)
+    topPoint = &p2;
+  if (p3.y < topPoint->y)
+    topPoint = &p3;
+
+  if (p2.y > bottomPoint->y)
+    bottomPoint = &p2;
+  if (p3.y > bottomPoint->y)
+    bottomPoint = &p3;
+
+  if (&p1 == topPoint)
+    {
+      m = &p2;
+      n = &p3;
+    }
+  else if (&p2 == topPoint)
+    {
+      m = &p1;
+      n = &p3;
+    }
+  else if (&p3 == topPoint)
+    {
+      m = &p1;
+      n = &p2;
+    }
+
+  int flippedN = 0;
+  int flippedM = 0;
+
+  for (int i = topPoint->y; i <= bottomPoint->y; ++i)
+    {
+      if (i == m->y)
+	{
+	  flippedM = 1;
+	}
+      else if (i == n->y)
+	{
+	  flippedN = 1;
+	}
+
+      int x1;
+      if (flippedM)
+	x1 = x_at_y(m->x, m->y, n->x, n->y, i);
+      else
+	x1 = x_at_y(topPoint->x, topPoint->y, m->x, m->y, i);
+      int x2;
+      if (flippedN)
+	x2 = x_at_y(m->x, m->y, n->x, n->y, i);
+      else
+	x2 = x_at_y(topPoint->x, topPoint->y, n->x, n->y, i);	
+
+      if (x1 == -1)
+	x1 = m->x;
+      if (x2 == -1)
+	x2 = n->x;
+
+      int maxx = max(x1, x2);
+      int minx = min(x1, x2);
+
+      for (int j = minx; j <= maxx; ++j)
+	{
+	  XPutPixel(img, j, i, whiteColor);
+	}
+    }
+}
+
+
 void graphics_prog()
 {
   Display* dsp;
-  int blackColor, whiteColor;
   Window wnd;
   GC gc;
   int x1 = 10,
@@ -67,7 +158,7 @@ void graphics_prog()
   wnd = XCreateSimpleWindow(dsp, DefaultRootWindow(dsp), 0, 0,
 			    640, 480, 0, blackColor, blackColor);
 
-  XSelectInput(dsp, wnd, StructureNotifyMask | ButtonPressMask | KeyPressMask | KeyReleaseMask | PointerMotionMask);
+  XSelectInput(dsp, wnd, StructureNotifyMask);
 
   XMapWindow(dsp, wnd);
 
@@ -82,40 +173,7 @@ void graphics_prog()
     
     switch (e.type)
       {
-      case KeyPress:
-	break;
-      case KeyRelease:
-	{
-	  XKeyEvent b = e.xkey;
-	  int keysym = (int)XLookupKeysym(&b, 0); // Why 0? I'm not sure...
-	  if (keysym == XK_Left)
-	    x1 += 10;
-	  if (keysym == XK_Right)
-	    x2 += 10;
-	  XDrawLine(dsp, wnd, gc, x1, 60, x2, 20);
-	}
-	break;
-      case FocusIn:
-	printf("Focus in\n");
-	break;
-      case FocusOut:
-	printf("Focus out\n");
-	break;
-      case ButtonPress:
-	printf("Button Press\n");
-	break;
-      case ButtonRelease:
-	printf("Button Release");
-	break;
-      case MotionNotify:
-	{
-	  XMotionEvent m = e.xmotion;
-	  //printf("{%d, %d}\n", m.x, m.y);
-	}
-	break;
       case MapNotify:
-	XDrawLine(dsp, wnd, gc, x1, 60, x2, 20);
-	XFlush(dsp);
 	exit = 1;
 	break;
       }
@@ -125,21 +183,20 @@ void graphics_prog()
   }
 
   {
-    XImage* img;
     img = XGetImage(dsp, wnd, 0, 0, 640, 480, 0xFFFFFFFF, ZPixmap);
     assert(img);
     {
-      for (int i = 0; i < img->width; ++i)
-	{
-	  for (int j = 0; j < 20; ++j)
-	    {
-	      XPutPixel(img, i, j, img->red_mask & 0xa0a0a0a0);
-	      XPutPixel(img, i, 20+j, img->red_mask & 0x0f0f0f0f);
-	    }
-	}
+      /*
+      struct point2 p1 = {10, 10},
+                    p2 = {100, 100},
+	            p3 = {15, 80};
+      draw_triangle(p1, p2, p3);
+      */
+      struct point2 p4 = {70, 12};
+      struct point2 p5 = {170, 220};
+      struct point2 p6 = {14, 38};
+      draw_triangle(p5, p6, p4);
     }
-    XDrawLine(dsp, wnd, gc, x2, 60, x1, 20);
-    XFlush(dsp);
     XPutImage(dsp, wnd, gc, img, 0, 0, 0, 0, 640, 480);
   }
 
