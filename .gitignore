@@ -2,3 +2,6 @@
 a.out
 *.o
 TAGS
+tags
+.*
+*.swap
