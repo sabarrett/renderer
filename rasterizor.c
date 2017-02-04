@@ -21,7 +21,9 @@ void graphics_prog();
 
 int main(int argc, char* argv[])
 {
+	test_transform();
 	test_mat4mul();
+	test_transpose();
 	graphics_prog();
 	return 0;
 }

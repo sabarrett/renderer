@@ -19,12 +19,34 @@ struct vec3 vec3up = {
 	.z = 0
 };
 
+struct vec3 vec3zero = {
+	.x = 0,
+	.y = 0,
+	.z = 0
+};
+
+struct vec3 vec3one = {
+	.x = 1,
+	.y = 1,
+	.z = 1
+};
+
 struct vec2 vec2mul(struct vec2 v, float scalar)
 {
 	struct vec2 out;
 	out.x = v.x * scalar;
 	out.y = v.y * scalar;
 	return out;
+}
+
+float vec3_angle(struct vec3 u, struct vec3 v)
+{
+	return fabs(acos(dot3(vec3_normalized(u), vec3_normalized(v))));
+}
+
+struct vec3 vec3_normalized(struct vec3 u)
+{
+	return vec3mul(u, 1 / vec3_magnitude(u));
 }
 
 float dot3(struct vec3 u, struct vec3 v)
@@ -71,6 +93,22 @@ struct vec3 projectOnPlane(struct vec3 u, struct vec3 n)
 struct vec3 proj(struct vec3 u, struct vec3 v)
 {
 	return vec3mul(v, dot3(u, v) / dot3(v, v));
+}
+
+int vec3_equal(struct vec3 u, struct vec3 v)
+{
+	return u.x == v.x && u.y == v.y && u.z == v.z;
+}
+
+struct vec3 vec3_add(struct vec3 u, struct vec3 v)
+{
+	struct vec3 out;
+
+	out.x = u.x + v.x;
+	out.y = u.y + v.y;
+	out.z = u.z + v.z;
+
+	return out;
 }
 
 float dot4(struct vec4 u, struct vec4 v)
