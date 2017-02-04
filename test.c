@@ -47,9 +47,42 @@ void test_transform()
 		struct transform_t t;
 
 		t.position = vec3zero;
-		t.rotation = vec3mul(vec3forward, M_PI_2);
+		t.rotation = vec3mul(vec3forward, 90);
 		t.scale = vec3one;
 
 		assert(vec3_angle(Transform(t, vec3up), vec3right) < 0.1f);
+	}
+}
+
+void test_inv_transform()
+{
+	{
+		struct transform_t t;
+
+		t.position = vec3forward;
+		t.rotation = vec3zero;
+		t.scale = vec3one;
+
+		assert(vec3_equal(InverseTransform(t, vec3forward), vec3zero));
+	}
+
+	{
+		struct transform_t t;
+
+		t.position = vec3zero;
+		t.rotation = vec3zero;
+		t.scale = vec3mul(vec3one, 2);
+
+		assert(vec3_equal(InverseTransform(t, vec3mul(vec3forward, 2)), vec3forward));
+	}
+
+	{
+		struct transform_t t;
+
+		t.position = vec3zero;
+		t.rotation = vec3mul(vec3forward, 90);
+		t.scale = vec3one;
+
+		assert(vec3_angle(InverseTransform(t, vec3right), vec3up) < 0.1f);
 	}
 }
