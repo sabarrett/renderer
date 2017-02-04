@@ -7,6 +7,7 @@
 #include <X11/Xutil.h>
 #include <math.h>
 #include "vec.h"
+#include "test.h"
 
 int blackColor, whiteColor;
 XImage* img;
@@ -20,6 +21,7 @@ void graphics_prog();
 
 int main(int argc, char* argv[])
 {
+	test_mat4mul();
 	graphics_prog();
 	return 0;
 }
@@ -169,7 +171,6 @@ void graphics_prog()
 		XPutImage(dsp, wnd, gc, img, 0, 0, 0, 0, 640, 480);
 	}
 
-	// ----- This code is never reached ------
 	sleep(3);
 
 	/* Not sure this stuff does anything. I put it in just in case,
