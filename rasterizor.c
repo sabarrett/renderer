@@ -38,9 +38,9 @@ int main(int argc, char* argv[])
 	test_transform();
 	test_mat4mul();
 	test_transpose();
-	cameraTransform.position = vec3zero;//vec3mul(vec3up, 0.2);
-	cameraTransform.rotation = vec3zero;//vec2mul(vec3right, 30);
-	cameraTransform.scale = vec3one;
+	cameraTransform.position = vec3_zero;//vec3_mul(vec3_up, 0.2);
+	cameraTransform.rotation = vec3_zero;//vec2_mul(vec3_right, 30);
+	cameraTransform.scale = vec3_one;
 	graphics_prog();
 	return 0;
 }
@@ -139,9 +139,9 @@ void draw_scene()
 	assert(img);
 	{
 		struct triangle_t triangle = {
-			.p0 = {0, 0.3, 1},
-			.p1 = {0.2, 0.3, 1},
-			.p2 = {0, 0.2, 1}
+			.p0 = {0, 0, 1},
+			.p1 = {0.5, 0, 1},
+			.p2 = {0.25, 0, 3}
 		};
 		struct triangle_t cameraSpaceTriangle =
 			map_triangle_to_camera_space(triangle);
@@ -196,39 +196,39 @@ void graphics_prog()
 				{
 					case XK_a:
 						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3mul(vec3right, -velocity));
+							vec3_add(cameraTransform.position, vec3_mul(vec3_right, -velocity));
 						break;
 					case XK_d:
 						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3mul(vec3right, velocity));
+							vec3_add(cameraTransform.position, vec3_mul(vec3_right, velocity));
 						break;
 					case XK_s:
 						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3mul(vec3up, -velocity));
+							vec3_add(cameraTransform.position, vec3_mul(vec3_forward, -velocity));
 						break;
 					case XK_w:
 						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3mul(vec3up, velocity));
+							vec3_add(cameraTransform.position, vec3_mul(vec3_forward, velocity));
 						break;
 					case XK_i:
 						cameraTransform.rotation =
-							vec3_add(cameraTransform.rotation, vec3mul(vec3right, theta));
+							vec3_add(cameraTransform.rotation, vec3_mul(vec3_right, theta));
 						break;
 					case XK_j:
 						cameraTransform.rotation =
-							vec3_add(cameraTransform.rotation, vec3mul(vec3up, -theta));
+							vec3_add(cameraTransform.rotation, vec3_mul(vec3_up, -theta));
 						break;
 					case XK_k:
 						cameraTransform.rotation =
-							vec3_add(cameraTransform.rotation, vec3mul(vec3right, -theta));
+							vec3_add(cameraTransform.rotation, vec3_mul(vec3_right, -theta));
 						break;
 					case XK_l:
 						cameraTransform.rotation =
-							vec3_add(cameraTransform.rotation, vec3mul(vec3up, theta));
+							vec3_add(cameraTransform.rotation, vec3_mul(vec3_up, theta));
 						break;
 					case XK_p:
 						{
-							vec3 pos = cameraTransform.position;
+							vec3 pos = Transform(cameraTransform, vec3_zero);
 							vec3 rot = cameraTransform.rotation;
 							printf("Pos: {%.2f %.2f %.2f}\n", pos.x, pos.y, pos.z);
 							printf("Rot: {%.2f %.2f %.2f}\n", rot.x, rot.y, rot.z);
@@ -258,10 +258,26 @@ struct triangle_t map_triangle_to_camera_space(struct triangle_t tri)
 	struct triangle_t out;
 
 	out.p0 = InverseTransform(cameraTransform, tri.p0);
+	if (out.p0.z < 0.001)
+		goto dont_draw;
+	out.p0 = vec3_mul(out.p0, 1/out.p0.z);
 	out.p1 = InverseTransform(cameraTransform, tri.p1);
+	if (out.p1.z < 0.001)
+		goto dont_draw;
+	out.p1 = vec3_mul(out.p1, 1/out.p1.z);
 	out.p2 = InverseTransform(cameraTransform, tri.p2);
+	if (out.p2.z < 0.001)
+		goto dont_draw;
+	out.p2 = vec3_mul(out.p2, 1/out.p2.z);
 
 	return out;
+
+dont_draw:
+	out.p0 = vec3_mul(vec3_up, 10000);
+	out.p1 = vec3_mul(vec3_up, 10000);
+	out.p2 = vec3_mul(vec3_up, 10000);
+	return out;
+
 }
 
 struct triangle_t screenspace_to_pixels(struct triangle_t tri)

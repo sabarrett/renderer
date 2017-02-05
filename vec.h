@@ -24,17 +24,17 @@ struct point2 {
 	int y;
 };
 
-extern struct vec3 vec3forward;
-extern struct vec3 vec3right;
-extern struct vec3 vec3up;
-extern struct vec3 vec3zero;
-extern struct vec3 vec3one;
+extern struct vec3 vec3_forward;
+extern struct vec3 vec3_right;
+extern struct vec3 vec3_up;
+extern struct vec3 vec3_zero;
+extern struct vec3 vec3_one;
 
-struct vec2 vec2mul(struct vec2 v, float scalar);
+struct vec2 vec2_mul(struct vec2 v, float scalar);
 
 int vec3_equal(struct vec3 u, struct vec3 v);
 struct vec3 vec3_add(struct vec3 u, struct vec3 v);
-struct vec3 vec3mul(struct vec3 v, float scalar);
+struct vec3 vec3_mul(struct vec3 v, float scalar);
 float dot3(struct vec3 u, struct vec3 v);
 float vec3_angle(struct vec3 u, struct vec3 v);
 struct vec3 vec3_normalized(struct vec3 u);
