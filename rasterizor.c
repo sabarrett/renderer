@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
 	test_transform();
 	test_mat4mul();
 	test_transpose();
-	cameraTransform.position = vec3mul(vec3up, 0.2);
-	cameraTransform.rotation = vec3mul(vec3right, 30);
+	cameraTransform.position = vec3zero;//vec3mul(vec3up, 0.2);
+	cameraTransform.rotation = vec3zero;//vec2mul(vec3right, 30);
 	cameraTransform.scale = vec3one;
 	graphics_prog();
 	return 0;
@@ -126,9 +126,35 @@ void draw_triangle(struct point2 p1, struct point2 p2, struct point2 p3)
 
 		for (int j = minx; j <= maxx; ++j)
 		{
-			XPutPixel(img, j, i, whiteColor);
+			if (j >= 0 && j <= width && i >= 0 && i <= height)
+				XPutPixel(img, j, i, whiteColor);
 		}
 	}
+}
+
+void draw_scene()
+{
+	XClearArea(dsp, wnd, 0, 0, width, height, 0);
+	img = XGetImage(dsp, wnd, 0, 0, width, height, 0xFFFFFFFF, ZPixmap);
+	assert(img);
+	{
+		struct triangle_t triangle = {
+			.p0 = {0, 0.3, 1},
+			.p1 = {0.2, 0.3, 1},
+			.p2 = {0, 0.2, 1}
+		};
+		struct triangle_t cameraSpaceTriangle =
+			map_triangle_to_camera_space(triangle);
+		struct triangle_t pixelPositionsTriangle =
+			screenspace_to_pixels(cameraSpaceTriangle);
+		struct point2 p0 = vec3_to_point2(pixelPositionsTriangle.p0);
+		struct point2 p1 = vec3_to_point2(pixelPositionsTriangle.p1);
+		struct point2 p2 = vec3_to_point2(pixelPositionsTriangle.p2);
+		draw_triangle(p0, p1, p2);
+	}
+
+	XPutImage(dsp, wnd, gc, img, 0, 0, 0, 0, width, height);
+
 }
 
 void graphics_prog()
@@ -144,8 +170,8 @@ void graphics_prog()
 
 	wnd = XCreateSimpleWindow(dsp, DefaultRootWindow(dsp), 0, 0,
 			width, height, 0, blackColor, blackColor);
-
-	XSelectInput(dsp, wnd, StructureNotifyMask);
+  
+	XSelectInput(dsp, wnd, StructureNotifyMask | KeyPressMask | KeyReleaseMask);
 
 	XMapWindow(dsp, wnd);
 
@@ -157,11 +183,62 @@ void graphics_prog()
 		XEvent e;
 		int exit = 0;
 		XNextEvent(dsp, &e);
+		float velocity = 0.1f;
+		float theta = 5;
 
 		switch (e.type)
 		{
 			case MapNotify:
-				exit = 1;
+				draw_scene();
+				break;
+			case KeyPress:
+				switch ((int)XLookupKeysym(&(e.xkey), 0))
+				{
+					case XK_a:
+						cameraTransform.position =
+							vec3_add(cameraTransform.position, vec3mul(vec3right, -velocity));
+						break;
+					case XK_d:
+						cameraTransform.position =
+							vec3_add(cameraTransform.position, vec3mul(vec3right, velocity));
+						break;
+					case XK_s:
+						cameraTransform.position =
+							vec3_add(cameraTransform.position, vec3mul(vec3up, -velocity));
+						break;
+					case XK_w:
+						cameraTransform.position =
+							vec3_add(cameraTransform.position, vec3mul(vec3up, velocity));
+						break;
+					case XK_i:
+						cameraTransform.rotation =
+							vec3_add(cameraTransform.rotation, vec3mul(vec3right, theta));
+						break;
+					case XK_j:
+						cameraTransform.rotation =
+							vec3_add(cameraTransform.rotation, vec3mul(vec3up, -theta));
+						break;
+					case XK_k:
+						cameraTransform.rotation =
+							vec3_add(cameraTransform.rotation, vec3mul(vec3right, -theta));
+						break;
+					case XK_l:
+						cameraTransform.rotation =
+							vec3_add(cameraTransform.rotation, vec3mul(vec3up, theta));
+						break;
+					case XK_p:
+						{
+							vec3 pos = cameraTransform.position;
+							vec3 rot = cameraTransform.rotation;
+							printf("Pos: {%.2f %.2f %.2f}\n", pos.x, pos.y, pos.z);
+							printf("Rot: {%.2f %.2f %.2f}\n", rot.x, rot.y, rot.z);
+						}
+						break;
+					case XK_q:
+						exit = 1;
+						break;
+				}
+				draw_scene();
 				break;
 		}
 
@@ -169,49 +246,7 @@ void graphics_prog()
 			break;
 	}
 
-	{
-		img = XGetImage(dsp, wnd, 0, 0, width, height, 0xFFFFFFFF, ZPixmap);
-		assert(img);
-		{
-			struct triangle_t triangle = {
-				.p0 = {0, 0.3, 1},
-				.p1 = {0.5, 0.3, 1},
-				.p2 = {0, 0.6, 1}
-			};
-			struct triangle_t cameraSpaceTriangle =
-				map_triangle_to_camera_space(triangle);
-			struct triangle_t pixelPositionsTriangle =
-				screenspace_to_pixels(cameraSpaceTriangle);
-			struct point2 p0 = vec3_to_point2(pixelPositionsTriangle.p0);
-			struct point2 p1 = vec3_to_point2(pixelPositionsTriangle.p1);
-			struct point2 p2 = vec3_to_point2(pixelPositionsTriangle.p2);
-			draw_triangle(p0, p1, p2);
-		}
 
-		/*
-		{
-			struct point2 p1 = {10, 10},
-						  p2 = {100, 100},
-						  p3 = {15, 80};
-			draw_triangle(p1, p2, p3);
-			struct point2 p4 = {70, 12};
-			struct point2 p5 = {70, 220};
-			struct point2 p6 = {14, 80};
-			draw_triangle(p5, p6, p4);
-			XPutPixel(img, p4.x, p4.y, 0xFFFF0000);
-			XPutPixel(img, p5.x, p5.y, 0xFFFF0000);
-			XPutPixel(img, p6.x, p6.y, 0xFFFF0000);
-		}
-		*/
-
-		XPutImage(dsp, wnd, gc, img, 0, 0, 0, 0, width, height);
-	}
-
-	sleep(3);
-
-	/* Not sure this stuff does anything. I put it in just in case,
-	 * but I still get an error message about unreleased windows or something.
-	 */
 	XDestroyWindow(dsp, wnd);
 
 	XCloseDisplay(dsp);
