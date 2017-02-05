@@ -8,16 +8,29 @@
 #include <math.h>
 #include "vec.h"
 #include "test.h"
+#include "transform.h"
 
 int blackColor, whiteColor;
 XImage* img;
 Display* dsp;
 Window wnd;
 GC gc;
-struct vec3 planeOrigin;
+struct transform_t cameraTransform;
+int width = 640,
+	height = 480;
 
 static int x_at_y(int x1, int y1, int x2, int y2, int y);
 void graphics_prog();
+
+struct triangle_t {
+	struct vec3 p0;
+	struct vec3 p1;
+	struct vec3 p2;
+};
+
+struct triangle_t map_triangle_to_camera_space(struct triangle_t tri);
+struct triangle_t screenspace_to_pixels(struct triangle_t tri);
+struct point2 vec3_to_point2(struct vec3 vector);
 
 int main(int argc, char* argv[])
 {
@@ -25,6 +38,9 @@ int main(int argc, char* argv[])
 	test_transform();
 	test_mat4mul();
 	test_transpose();
+	cameraTransform.position = vec3mul(vec3up, 0.2);
+	cameraTransform.rotation = vec3mul(vec3right, 30);
+	cameraTransform.scale = vec3one;
 	graphics_prog();
 	return 0;
 }
@@ -115,7 +131,6 @@ void draw_triangle(struct point2 p1, struct point2 p2, struct point2 p3)
 	}
 }
 
-
 void graphics_prog()
 {
 	int x1 = 10,
@@ -128,7 +143,7 @@ void graphics_prog()
 	whiteColor = WhitePixel(dsp, DefaultScreen(dsp));
 
 	wnd = XCreateSimpleWindow(dsp, DefaultRootWindow(dsp), 0, 0,
-			640, 480, 0, blackColor, blackColor);
+			width, height, 0, blackColor, blackColor);
 
 	XSelectInput(dsp, wnd, StructureNotifyMask);
 
@@ -155,8 +170,25 @@ void graphics_prog()
 	}
 
 	{
-		img = XGetImage(dsp, wnd, 0, 0, 640, 480, 0xFFFFFFFF, ZPixmap);
+		img = XGetImage(dsp, wnd, 0, 0, width, height, 0xFFFFFFFF, ZPixmap);
 		assert(img);
+		{
+			struct triangle_t triangle = {
+				.p0 = {0, 0.3, 1},
+				.p1 = {0.5, 0.3, 1},
+				.p2 = {0, 0.6, 1}
+			};
+			struct triangle_t cameraSpaceTriangle =
+				map_triangle_to_camera_space(triangle);
+			struct triangle_t pixelPositionsTriangle =
+				screenspace_to_pixels(cameraSpaceTriangle);
+			struct point2 p0 = vec3_to_point2(pixelPositionsTriangle.p0);
+			struct point2 p1 = vec3_to_point2(pixelPositionsTriangle.p1);
+			struct point2 p2 = vec3_to_point2(pixelPositionsTriangle.p2);
+			draw_triangle(p0, p1, p2);
+		}
+
+		/*
 		{
 			struct point2 p1 = {10, 10},
 						  p2 = {100, 100},
@@ -170,8 +202,9 @@ void graphics_prog()
 			XPutPixel(img, p5.x, p5.y, 0xFFFF0000);
 			XPutPixel(img, p6.x, p6.y, 0xFFFF0000);
 		}
+		*/
 
-		XPutImage(dsp, wnd, gc, img, 0, 0, 0, 0, 640, 480);
+		XPutImage(dsp, wnd, gc, img, 0, 0, 0, 0, width, height);
 	}
 
 	sleep(3);
@@ -182,4 +215,41 @@ void graphics_prog()
 	XDestroyWindow(dsp, wnd);
 
 	XCloseDisplay(dsp);
+}
+
+struct triangle_t map_triangle_to_camera_space(struct triangle_t tri)
+{
+	// World space to camera space
+	struct triangle_t out;
+
+	out.p0 = InverseTransform(cameraTransform, tri.p0);
+	out.p1 = InverseTransform(cameraTransform, tri.p1);
+	out.p2 = InverseTransform(cameraTransform, tri.p2);
+
+	return out;
+}
+
+struct triangle_t screenspace_to_pixels(struct triangle_t tri)
+{
+	// Camera space to 2D normalized screen space
+	struct triangle_t out;
+
+	out.p0.x = (int)(width * tri.p0.x + (width / 2));
+	out.p0.y = (int)(height * tri.p0.y + (height / 2));
+	out.p1.x = (int)(width * tri.p1.x + (width / 2));
+	out.p1.y = (int)(height * tri.p1.y + (height / 2));
+	out.p2.x = (int)(width * tri.p2.x + (width / 2));
+	out.p2.y = (int)(height * tri.p2.y + (height / 2));
+
+	return out;
+}
+
+struct point2 vec3_to_point2(struct vec3 vector)
+{
+	struct point2 out;
+
+	out.x = vector.x;
+	out.y = vector.y;
+
+	return out;
 }
