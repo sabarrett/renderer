@@ -28,36 +28,39 @@ static struct mat4 translationMat(vec3 movement)
 
 static struct mat4 rotationMat(vec3 rotation)
 {
-	struct mat4 out = mat4_identity;
+	struct mat4 out = mat4_identity,
+				rotX = mat4_identity,
+				rotY = mat4_identity,
+				rotZ = mat4_identity;
 	float x = rotation.x * M_PI / 180,
  		  y = rotation.y * M_PI / 180,
 		  z = rotation.z * M_PI / 180;
 
 	// Set X
 	{
-		out = mat4_SetCell(out, 1, 1, cos(x));
-		out = mat4_SetCell(out, 1, 2, sin(x));
-		out = mat4_SetCell(out, 2, 1, -sin(x));
-		out = mat4_SetCell(out, 2, 2, cos(x));
+		rotX = mat4_SetCell(rotX, 1, 1, cos(x));
+		rotX = mat4_SetCell(rotX, 1, 2, sin(x));
+		rotX = mat4_SetCell(rotX, 2, 1, -sin(x));
+		rotX = mat4_SetCell(rotX, 2, 2, cos(x));
 	}
 
 	// Set Y
 	{
-		out = mat4_SetCell(out, 0, 0, cos(y));
-		out = mat4_SetCell(out, 0, 2, -sin(y));
-		out = mat4_SetCell(out, 2, 0, sin(y));
-		out = mat4_SetCell(out, 2, 2, cos(y));
+		rotY = mat4_SetCell(rotY, 0, 0, cos(y));
+		rotY = mat4_SetCell(rotY, 0, 2, -sin(y));
+		rotY = mat4_SetCell(rotY, 2, 0, sin(y));
+		rotY = mat4_SetCell(rotY, 2, 2, cos(y));
 	}
 
 	// Set Z
 	{
-		out = mat4_SetCell(out, 0, 0, cos(z));
-		out = mat4_SetCell(out, 0, 1, sin(z));
-		out = mat4_SetCell(out, 1, 0, -sin(z));
-		out = mat4_SetCell(out, 1, 1, cos(z));
+		rotZ = mat4_SetCell(rotZ, 0, 0, cos(z));
+		rotZ = mat4_SetCell(rotZ, 0, 1, sin(z));
+		rotZ = mat4_SetCell(rotZ, 1, 0, -sin(z));
+		rotZ = mat4_SetCell(rotZ, 1, 1, cos(z));
 	}
 
-	return out;
+	return mat4mul(mat4mul(mat4mul(mat4_identity, rotZ), rotX), rotY);
 }
 
 static struct mat4 inv_rotationMat(vec3 rotation)
@@ -124,5 +127,5 @@ struct mat4 Transform_GetMatrix(struct transform_t transform)
 
 struct mat4 Transform_GetInvMatrix(struct transform_t transform)
 {
-	return mat4mul(mat4mul(mat4mul(mat4_identity, inv_transMat(transform.position)), inv_rotationMat(transform.rotation)), inv_scaleMat(transform.scale));
+	return mat4mul(mat4mul(mat4mul(mat4_identity, inv_scaleMat(transform.scale)), inv_rotationMat(transform.rotation)), inv_transMat(transform.position));
 }
