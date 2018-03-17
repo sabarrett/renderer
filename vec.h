@@ -42,6 +42,7 @@ struct vec3 proj(struct vec3 u, struct vec3 v);
 struct vec3 projectOnPlane(struct vec3 u, struct vec3 n);
 struct vec3 vec3_minus(struct vec3 u, struct vec3 v);
 struct vec3 vec3_uToV(struct vec3 u, struct vec3 v);
+struct vec3 vec3_lerp(struct vec3 a, struct vec3 b, float t);
 float vec3_magnitude(struct vec3 u);
 
 float dot4(struct vec4 u, struct vec4 v);

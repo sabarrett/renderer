@@ -10,14 +10,30 @@
 #include "test.h"
 #include "transform.h"
 
-int blackColor, whiteColor;
+int blackColor,
+    whiteColor,
+    redColor,
+    greenColor,
+    blueColor;
 XImage* img;
 Display* dsp;
 Window wnd;
 GC gc;
 struct transform_t cameraTransform;
 int width = 640,
-	height = 480;
+    height = 480;
+
+typedef int Color;
+
+float colorR(Color);
+float colorG(Color);
+float colorB(Color);
+
+Color color3f(float, float, float);
+void put_pixel_color2i(int, int, Color);
+void put_pixel2i3f(int, int, float, float, float);
+float lerp(float, float, float);
+Color color_lerp(Color, Color, float);
 
 static int x_at_y(int x1, int y1, int x2, int y2, int y);
 void graphics_prog();
@@ -123,13 +139,65 @@ void draw_triangle(struct point2 p1, struct point2 p2, struct point2 p3)
 
 		int maxx = max(x1, x2);
 		int minx = min(x1, x2);
+		Color c = color_lerp(color3f(0, 0, 0), color3f(1, 0, 0), 0.5);
 
 		for (int j = minx; j <= maxx; ++j)
 		{
 			if (j >= 0 && j <= width && i >= 0 && i <= height)
-				XPutPixel(img, j, i, whiteColor);
+				XPutPixel(img, j, i, c);
 		}
 	}
+}
+
+void put_pixel_color2i(int x, int y, Color c)
+{
+    XPutPixel(img, x, y, c);
+}
+
+Color color3f(float r, float g, float b)
+{
+    int red = (int)(r * 0xff) * 256 * 256;
+    int green = (int)(g * 0xff) * 256;
+    int blue = (int)(b * 0xff);
+    return red + green + blue;
+}
+
+float colorR(Color c)
+{
+    return (0xff0000 & c) / 255.0 / 256.0 / 256.0;
+}
+
+float colorG(Color c)
+{
+    return (0x00ff00 & c) / 255.0 / 256.0;
+}
+
+float colorB(Color c)
+{
+    return (0x0000ff & c) / 255.0;
+}
+
+void put_pixel2i3f(int x, int y, float r, float g, float b)
+{
+    put_pixel_color2i(x, y, color3f(r, g, b));
+}
+
+Color color_lerp(Color a, Color b, float t)
+{
+    struct vec3 vA = {
+	.x = colorR(a),
+	.y = colorG(a),
+	.z = colorB(a)
+    };
+
+    struct vec3 vB = {
+	.x = colorR(b),
+	.y = colorG(b),
+	.z = colorB(b)
+    };
+
+    struct vec3 vC = vec3_lerp(vA, vB, t);
+    return color3f(vC.x, vC.y, vC.z);
 }
 
 void draw_scene()
@@ -141,7 +209,7 @@ void draw_scene()
 		struct triangle_t triangle = {
 			.p0 = {0, 0, 1},
 			.p1 = {0.5, 0, 1},
-			.p2 = {0.25, 0, 3}
+			.p2 = {0.25, 0.5, 3}
 		};
 		struct triangle_t cameraSpaceTriangle =
 			map_triangle_to_camera_space(triangle);
@@ -167,6 +235,10 @@ void graphics_prog()
 
 	blackColor = BlackPixel(dsp, DefaultScreen(dsp));
 	whiteColor = WhitePixel(dsp, DefaultScreen(dsp));
+	printf("Black pixel: %x\n", blackColor);
+	printf("White pixel: %x\n", whiteColor);
+	Color c = color_lerp(color3f(0, 0, 0), color3f(1, 0, 0), 0.5);
+	printf("Color: %x\n", c);
 
 	wnd = XCreateSimpleWindow(dsp, DefaultRootWindow(dsp), 0, 0,
 			width, height, 0, blackColor, blackColor);
@@ -195,20 +267,36 @@ void graphics_prog()
 				switch ((int)XLookupKeysym(&(e.xkey), 0))
 				{
 					case XK_a:
-						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3_mul(vec3_right, -velocity));
+					    {
+						struct vec3 cameraRight = Transform_Right(cameraTransform);
+						cameraTransform.position = vec3_add(cameraTransform.position, vec3_mul(cameraRight, -velocity));
+					    }
 						break;
 					case XK_d:
-						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3_mul(vec3_right, velocity));
+					    {
+						struct vec3 cameraRight = Transform_Right(cameraTransform);
+						cameraTransform.position = vec3_add(cameraTransform.position, vec3_mul(cameraRight, velocity));
+					    }
 						break;
 					case XK_s:
-						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3_mul(vec3_forward, -velocity));
+					    {
+						struct vec3 cameraForward = Transform_Forward(cameraTransform);
+						cameraTransform.position = vec3_add(cameraTransform.position, vec3_mul(cameraForward, -velocity));
+					    }
 						break;
 					case XK_w:
+					    {
+						struct vec3 cameraForward = Transform_Forward(cameraTransform);
+						cameraTransform.position = vec3_add(cameraTransform.position, vec3_mul(cameraForward, velocity));
+					    }
+						break;
+					case XK_z:
 						cameraTransform.position =
-							vec3_add(cameraTransform.position, vec3_mul(vec3_forward, velocity));
+							vec3_add(cameraTransform.position, vec3_mul(vec3_up, velocity));
+						break;
+					case XK_x:
+						cameraTransform.position =
+							vec3_add(cameraTransform.position, vec3_mul(vec3_up, -velocity));
 						break;
 					case XK_i:
 						cameraTransform.rotation =
@@ -216,7 +304,7 @@ void graphics_prog()
 						break;
 					case XK_j:
 						cameraTransform.rotation =
-							vec3_add(cameraTransform.rotation, vec3_mul(vec3_up, -theta));
+							vec3_add(cameraTransform.rotation, vec3_mul(vec3_up, theta));
 						break;
 					case XK_k:
 						cameraTransform.rotation =
@@ -224,7 +312,7 @@ void graphics_prog()
 						break;
 					case XK_l:
 						cameraTransform.rotation =
-							vec3_add(cameraTransform.rotation, vec3_mul(vec3_up, theta));
+							vec3_add(cameraTransform.rotation, vec3_mul(vec3_up, -theta));
 						break;
 					case XK_p:
 						{
@@ -286,11 +374,11 @@ struct triangle_t screenspace_to_pixels(struct triangle_t tri)
 	struct triangle_t out;
 
 	out.p0.x = (int)(width * tri.p0.x + (width / 2));
-	out.p0.y = (int)(height * tri.p0.y + (height / 2));
+	out.p0.y = (int)(height * -tri.p0.y + (height / 2));
 	out.p1.x = (int)(width * tri.p1.x + (width / 2));
-	out.p1.y = (int)(height * tri.p1.y + (height / 2));
+	out.p1.y = (int)(height * -tri.p1.y + (height / 2));
 	out.p2.x = (int)(width * tri.p2.x + (width / 2));
-	out.p2.y = (int)(height * tri.p2.y + (height / 2));
+	out.p2.y = (int)(height * -tri.p2.y + (height / 2));
 
 	return out;
 }

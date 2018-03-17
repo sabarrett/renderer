@@ -111,6 +111,11 @@ struct vec3 vec3_add(struct vec3 u, struct vec3 v)
 	return out;
 }
 
+struct vec3 vec3_lerp(struct vec3 a, struct vec3 b, float t)
+{
+    return vec3_add(a, vec3_mul(vec3_uToV(a, b), t));
+}
+
 float dot4(struct vec4 u, struct vec4 v)
 {
 	return u.x * v.x + u.y * v.y + u.z * v.z + u.w * v.w;

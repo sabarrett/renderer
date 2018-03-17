@@ -120,12 +120,30 @@ vec3 InverseTransform(struct transform_t transform, vec3 point)
 	return applyMat(Transform_GetInvMatrix(transform), point);
 }
 
+vec3 Transform_Forward(struct transform_t transform)
+{
+    return applyMat(rotationMat(transform.rotation), vec3_forward);
+}
+
+vec3 Transform_Right(struct transform_t transform)
+{
+    return applyMat(rotationMat(transform.rotation), vec3_right);
+}
+
 struct mat4 Transform_GetMatrix(struct transform_t transform)
 {
-	return mat4mul(mat4mul(mat4mul(mat4_identity, translationMat(transform.position)), rotationMat(transform.rotation)), scaleMat(transform.scale));
+	struct mat4 scaled = mat4mul(scaleMat(transform.scale), mat4_identity);
+	struct mat4 rotated = mat4mul(rotationMat(transform.rotation), scaled);
+	struct mat4 translated = mat4mul(translationMat(transform.position), rotated);
+
+	return translated;
 }
 
 struct mat4 Transform_GetInvMatrix(struct transform_t transform)
 {
-	return mat4mul(mat4mul(mat4mul(mat4_identity, inv_scaleMat(transform.scale)), inv_rotationMat(transform.rotation)), inv_transMat(transform.position));
+	struct mat4 translated = mat4mul(inv_transMat(transform.position), mat4_identity);
+	struct mat4 rotated = mat4mul(inv_rotationMat(transform.rotation), translated);
+	struct mat4 scaled = mat4mul(inv_scaleMat(transform.scale), rotated);
+
+	return scaled;
 }
